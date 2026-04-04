@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+smartreceipt.db
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Env files
+.env
+
+# Logs
+*.log
+
+# Qwen
+.qwen/
+
+# Docker / deployment
+docker-compose.override.yml

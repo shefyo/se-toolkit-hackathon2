@@ -3,296 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartReceipt - Expense Tracker</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            color: white;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-
-        .input-section textarea {
-            width: 100%;
-            min-height: 120px;
-            padding: 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            resize: vertical;
-            transition: border-color 0.3s;
-        }
-
-        .input-section textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 12px;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .submit-btn:active {
-            transform: translateY(0);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .result-message {
-            margin-top: 16px;
-            padding: 12px 16px;
-            border-radius: 8px;
-            display: none;
-        }
-
-        .result-message.success {
-            background: #d4edda;
-            color: #155724;
-            display: block;
-        }
-
-        .result-message.error {
-            background: #f8d7da;
-            color: #721c24;
-            display: block;
-        }
-
-        .expenses-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .expenses-header h2 {
-            color: #333;
-            font-size: 1.5rem;
-        }
-
-        .refresh-btn {
-            padding: 8px 16px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .refresh-btn:hover {
-            background: #5568d3;
-        }
-
-        .expense-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .expense-item:last-child {
-            border-bottom: none;
-        }
-
-        .expense-info {
-            flex: 1;
-        }
-
-        .expense-name {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .expense-category {
-            font-size: 12px;
-            color: #888;
-            text-transform: uppercase;
-        }
-
-        .expense-amount {
-            font-weight: 700;
-            color: #667eea;
-            font-size: 1.2rem;
-        }
-
-        .expense-date {
-            font-size: 11px;
-            color: #aaa;
-            margin-top: 4px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #888;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
-        }
-    </style>
+    <title>SmartReceipt — AI Financial Assistant</title>
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>🧾 SmartReceipt</h1>
-
-        <div class="card input-section">
-            <textarea 
-                id="expenseInput" 
-                placeholder="Enter your expenses here...&#10;Example: I bought coffee for 5 and pizza for 10"
-            ></textarea>
-            <button class="submit-btn" id="submitBtn" onclick="submitExpenses()">
-                💰 Parse & Save Expenses
-            </button>
-            <div id="resultMessage" class="result-message"></div>
-        </div>
-
-        <div class="card">
-            <div class="expenses-header">
-                <h2>📋 Expense History</h2>
-                <button class="refresh-btn" onclick="loadExpenses()">Refresh</button>
+    <div class="app">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo-icon">🧾</span>
+                <span class="logo-text">SmartReceipt</span>
             </div>
-            <div id="expensesList">
-                <div class="loading">Loading expenses...</div>
+            <ul class="nav-menu">
+                <li class="nav-item active" data-tab="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </li>
+                <li class="nav-item" data-tab="expenses">
+                    <span class="nav-icon">💳</span>
+                    <span>Expenses</span>
+                </li>
+                <li class="nav-item" data-tab="stats">
+                    <span class="nav-icon">📈</span>
+                    <span>Analytics</span>
+                </li>
+                <li class="nav-item" data-tab="advice">
+                    <span class="nav-icon">💡</span>
+                    <span>AI Advice</span>
+                </li>
+                <li class="nav-item" data-tab="chat">
+                    <span class="nav-icon">💬</span>
+                    <span>Chat Assistant</span>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <span class="version">v2.0.0</span>
             </div>
-        </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-bar">
+                <h1 id="pageTitle">Dashboard</h1>
+                <div class="top-bar-actions">
+                    <button class="btn btn-outline" onclick="refreshAll()">🔄 Refresh</button>
+                </div>
+            </header>
+
+            <!-- Tab: Dashboard -->
+            <div id="tab-dashboard" class="tab-content active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">💰</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Spending</span>
+                            <span class="stat-value" id="dashTotal">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">📝</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Expenses</span>
+                            <span class="stat-value" id="dashCount">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">📂</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Categories</span>
+                            <span class="stat-value" id="dashCategories">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">💡</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Top Category</span>
+                            <span class="stat-value" id="dashTopCategory">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Add Expense -->
+                <div class="card quick-add">
+                    <h2>⚡ Quick Add Expense</h2>
+                    <textarea id="quickExpenseInput" placeholder="e.g., I bought coffee for 5 and lunch for 12"></textarea>
+                    <button class="btn btn-primary" id="quickSubmitBtn" onclick="submitQuickExpense()">Parse & Save</button>
+                    <div id="quickResult" class="result-message"></div>
+                </div>
+
+                <!-- Recent Expenses -->
+                <div class="card">
+                    <h2>🕐 Recent Expenses</h2>
+                    <div id="recentExpenses" class="expense-list">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Expenses -->
+            <div id="tab-expenses" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>💳 All Expenses</h2>
+                        <button class="btn btn-outline btn-sm" onclick="loadAllExpenses()">Refresh</button>
+                    </div>
+                    <textarea id="expenseInput" placeholder="Enter expenses in natural language...&#10;Example: I bought coffee for 5, paid 20 for gas, and spent 15 on lunch" class="input-lg"></textarea>
+                    <button class="btn btn-primary" id="parseSubmitBtn" onclick="submitExpense()">Parse & Save</button>
+                    <div id="parseResult" class="result-message"></div>
+                </div>
+                <div class="card">
+                    <div id="allExpenses" class="expense-list">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Analytics -->
+            <div id="tab-stats" class="tab-content">
+                <div class="card">
+                    <h2>📈 Spending Analytics</h2>
+                    <div id="statsOverview" class="stats-overview">
+                        <div class="loading">Loading stats...</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>📊 Spending by Category</h2>
+                    <div id="categoryChart" class="category-chart">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: AI Advice -->
+            <div id="tab-advice" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>💡 AI Financial Advice</h2>
+                        <button class="btn btn-primary btn-sm" onclick="generateAdvice()">Get New Advice</button>
+                    </div>
+                    <p class="advice-intro">AI-powered tips based on your spending patterns.</p>
+                    <div id="adviceContent" class="advice-list">
+                        <div class="loading">Loading advice...</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>📜 Advice History</h2>
+                    <div id="adviceHistory" class="advice-history">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Chat -->
+            <div id="tab-chat" class="tab-content">
+                <div class="card chat-card">
+                    <h2>💬 AI Chat Assistant</h2>
+                    <p class="chat-intro">Ask questions about your spending, budget, or saving strategies.</p>
+                    <div id="chatMessages" class="chat-messages">
+                        <div class="chat-message bot">
+                            <div class="message-content">
+                                👋 Hi! I'm your financial assistant. Ask me about your spending, budget tips, or how to save money.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" placeholder="Ask a question about your finances..." onkeypress="handleChatKeypress(event)">
+                        <button class="btn btn-primary" onclick="sendChatMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <script>
-        const API_URL = window.location.origin;
-
-        async function submitExpenses() {
-            const text = document.getElementById('expenseInput').value.trim();
-            const btn = document.getElementById('submitBtn');
-            const resultDiv = document.getElementById('resultMessage');
-
-            if (!text) {
-                resultDiv.className = 'result-message error';
-                resultDiv.textContent = 'Please enter some text with expenses.';
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = 'Processing...';
-
-            try {
-                const response = await fetch(`${API_URL}/parse-expenses`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text })
-                });
-
-                const data = await response.json();
-
-                if (data.saved && data.saved.length > 0) {
-                    resultDiv.className = 'result-message success';
-                    resultDiv.textContent = data.message;
-                    document.getElementById('expenseInput').value = '';
-                    loadExpenses();
-                } else {
-                    resultDiv.className = 'result-message error';
-                    resultDiv.textContent = data.message || 'No expenses found.';
-                }
-            } catch (error) {
-                resultDiv.className = 'result-message error';
-                resultDiv.textContent = 'Error connecting to server.';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '💰 Parse & Save Expenses';
-            }
-        }
-
-        async function loadExpenses() {
-            const listDiv = document.getElementById('expensesList');
-            listDiv.innerHTML = '<div class="loading">Loading expenses...</div>';
-
-            try {
-                const response = await fetch(`${API_URL}/expenses`);
-                const expenses = await response.json();
-
-                if (expenses.length === 0) {
-                    listDiv.innerHTML = '<div class="empty-state">No expenses yet. Add your first expense above!</div>';
-                    return;
-                }
-
-                let html = '';
-                expenses.forEach(exp => {
-                    const date = new Date(exp.created_at).toLocaleString();
-                    html += `
-                        <div class="expense-item">
-                            <div class="expense-info">
-                                <div class="expense-name">${escapeHtml(exp.item)}</div>
-                                <div class="expense-category">${escapeHtml(exp.category)}</div>
-                                <div class="expense-date">${date}</div>
-                            </div>
-                            <div class="expense-amount">$${parseFloat(exp.amount).toFixed(2)}</div>
-                        </div>
-                    `;
-                });
-
-                listDiv.innerHTML = html;
-            } catch (error) {
-                listDiv.innerHTML = '<div class="empty-state">Error loading expenses.</div>';
-            }
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Load expenses on page load
-        document.addEventListener('DOMContentLoaded', loadExpenses);
-    </script>
+    <script src="/static/app.js"></script>
 </body>
 </html>
