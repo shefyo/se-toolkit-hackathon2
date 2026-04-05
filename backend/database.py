@@ -2,18 +2,28 @@ import sqlite3
 from datetime import datetime
 from typing import List, Dict, Optional
 import os
+import logging
 
-# Shared persistent DB — mounted via Docker volume so bot/backend/frontend all see the same data
+logger = logging.getLogger("smartreceipt.db")
+
+# ==================== DB PATH ====================
+# Inside Docker: WORKDIR=/app → data/smartreceipt.db resolves to /app/data/smartreceipt.db
+# Volume mount: ./data:/app/data → persists on host
 DB_PATH = os.environ.get(
     "DATABASE_PATH",
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "smartreceipt.db"),
 )
 
-# Ensure parent directory exists (auto-create on first import)
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+def _ensure_dir():
+    """Create the data directory if it doesn't exist. Called before every DB operation."""
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
 
 
 def get_connection() -> sqlite3.Connection:
+    _ensure_dir()
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")

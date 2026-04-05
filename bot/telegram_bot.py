@@ -1,4 +1,6 @@
 import os
+import sys
+import time
 import logging
 import httpx
 from telegram import Update
@@ -37,6 +39,24 @@ logger = logging.getLogger(__name__)
 
 def _emoji(category: str) -> str:
     return CATEGORY_EMOJIS.get(category, "📦")
+
+
+def wait_for_backend(max_retries: int = 10, delay: int = 2) -> bool:
+    """Block until backend /health responds or max_retries exhausted."""
+    health_url = f"{BACKEND_URL}/health"
+    for i in range(1, max_retries + 1):
+        try:
+            with httpx.Client(timeout=5.0) as client:
+                resp = client.get(health_url)
+                if resp.status_code == 200:
+                    logger.info("Backend is healthy — starting bot")
+                    return True
+        except Exception:
+            pass
+        logger.info("Waiting for backend… (%d/%d)", i, max_retries)
+        time.sleep(delay)
+    logger.error("Backend did not become healthy after %d retries — proceeding anyway", max_retries)
+    return False
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -152,7 +172,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_text = update.message.text
 
-    # Check if user is in chat mode
     if user_id in chat_mode_users:
         await handle_chat_message(update, user_text)
     else:
@@ -207,7 +226,6 @@ async def handle_expense_message(update: Update, user_text: str):
             )
             return
 
-        # Build rich confirmation with emojis
         message = "✅ *Saved:*\n\n"
         for exp in saved_expenses:
             item = exp["item"]
@@ -246,20 +264,21 @@ def main():
         )
         return
 
+    # Wait for backend to be healthy before starting
+    wait_for_backend(max_retries=10, delay=2)
+
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Register command handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("advice", advice))
     app.add_handler(CommandHandler("chat", chat_mode))
     app.add_handler(CommandHandler("exit", exit_chat_mode))
 
-    # Register message handler (non-command text)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_error_handler(error_handler)
 
-    logger.info("Bot is running...")
+    logger.info("Bot is running…")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
