@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartReceipt — AI Financial Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo-icon">🧾</span>
+                <span class="logo-text">SmartReceipt</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active" data-tab="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </li>
+                <li class="nav-item" data-tab="expenses">
+                    <span class="nav-icon">💳</span>
+                    <span>Expenses</span>
+                </li>
+                <li class="nav-item" data-tab="stats">
+                    <span class="nav-icon">📈</span>
+                    <span>Analytics</span>
+                </li>
+                <li class="nav-item" data-tab="advice">
+                    <span class="nav-icon">💡</span>
+                    <span>AI Advice</span>
+                </li>
+                <li class="nav-item" data-tab="chat">
+                    <span class="nav-icon">💬</span>
+                    <span>Chat Assistant</span>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <span class="version">v2.0.0</span>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-bar">
+                <h1 id="pageTitle">Dashboard</h1>
+                <div class="top-bar-actions">
+                    <button class="btn btn-outline" onclick="refreshAll()">🔄 Refresh</button>
+                </div>
+            </header>
+
+            <!-- Tab: Dashboard -->
+            <div id="tab-dashboard" class="tab-content active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">💰</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Spending</span>
+                            <span class="stat-value" id="dashTotal">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">📝</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Expenses</span>
+                            <span class="stat-value" id="dashCount">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">📂</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Categories</span>
+                            <span class="stat-value" id="dashCategories">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">💡</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Top Category</span>
+                            <span class="stat-value" id="dashTopCategory">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Add Expense -->
+                <div class="card quick-add">
+                    <h2>⚡ Quick Add Expense</h2>
+                    <textarea id="quickExpenseInput" placeholder="e.g., I bought coffee for 5 and lunch for 12"></textarea>
+                    <button class="btn btn-primary" id="quickSubmitBtn" onclick="submitQuickExpense()">Parse & Save</button>
+                    <div id="quickResult" class="result-message"></div>
+                </div>
+
+                <!-- Recent Expenses -->
+                <div class="card">
+                    <h2>🕐 Recent Expenses</h2>
+                    <div id="recentExpenses" class="expense-list">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Expenses -->
+            <div id="tab-expenses" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>💳 All Expenses</h2>
+                        <button class="btn btn-outline btn-sm" onclick="loadAllExpenses()">Refresh</button>
+                    </div>
+                    <textarea id="expenseInput" placeholder="Enter expenses in natural language...&#10;Example: I bought coffee for 5, paid 20 for gas, and spent 15 on lunch" class="input-lg"></textarea>
+                    <button class="btn btn-primary" id="parseSubmitBtn" onclick="submitExpense()">Parse & Save</button>
+                    <div id="parseResult" class="result-message"></div>
+                </div>
+                <div class="card">
+                    <div id="allExpenses" class="expense-list">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Analytics -->
+            <div id="tab-stats" class="tab-content">
+                <div class="card">
+                    <h2>📈 Spending Analytics</h2>
+                    <div id="statsOverview" class="stats-overview">
+                        <div class="loading">Loading stats...</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>📊 Spending by Category</h2>
+                    <div id="categoryChart" class="category-chart">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: AI Advice -->
+            <div id="tab-advice" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>💡 AI Financial Advice</h2>
+                        <button class="btn btn-primary btn-sm" onclick="generateAdvice()">Get New Advice</button>
+                    </div>
+                    <p class="advice-intro">AI-powered tips based on your spending patterns.</p>
+                    <div id="adviceContent" class="advice-list">
+                        <div class="loading">Loading advice...</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>📜 Advice History</h2>
+                    <div id="adviceHistory" class="advice-history">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Chat -->
+            <div id="tab-chat" class="tab-content">
+                <div class="card chat-card">
+                    <h2>💬 AI Chat Assistant</h2>
+                    <p class="chat-intro">Ask questions about your spending, budget, or saving strategies.</p>
+                    <div id="chatMessages" class="chat-messages">
+                        <div class="chat-message bot">
+                            <div class="message-content">
+                                👋 Hi! I'm your financial assistant. Ask me about your spending, budget tips, or how to save money.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" placeholder="Ask a question about your finances..." onkeypress="handleChatKeypress(event)">
+                        <button class="btn btn-primary" onclick="sendChatMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
