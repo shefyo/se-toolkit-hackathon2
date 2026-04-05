@@ -109,6 +109,12 @@ def startup():
 api = FastAPI()
 
 
+@api.get("/health")
+async def api_health():
+    """Health check via /api/health (through nginx proxy)."""
+    return {"status": "ok", "version": "2.0.0"}
+
+
 # --- Expense endpoints ---
 
 @api.post("/parse-expenses")
