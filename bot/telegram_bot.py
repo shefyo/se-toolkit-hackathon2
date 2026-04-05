@@ -11,10 +11,22 @@ from telegram.ext import (
 )
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 
 # Track users in chat mode
 chat_mode_users = set()
+
+# Category emoji map
+CATEGORY_EMOJIS = {
+    "food": "🍔",
+    "transport": "🚕",
+    "entertainment": "🎬",
+    "shopping": "🛍️",
+    "utilities": "💡",
+    "health": "🏥",
+    "travel": "✈️",
+    "other": "📦",
+}
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -23,19 +35,23 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _emoji(category: str) -> str:
+    return CATEGORY_EMOJIS.get(category, "📦")
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command."""
     welcome_message = (
         "👋 Welcome to *SmartReceipt*!\n\n"
         "I'm your AI-powered financial assistant.\n\n"
         "*Commands:*\n"
-        "• Send expenses — I'll log them automatically\n"
+        "• Send expenses — I'll parse & log them automatically\n"
         "• /stats — View your spending analytics\n"
         "• /advice — Get AI-powered financial tips\n"
         "• /chat — Chat with me about your finances\n"
         "• /exit — Exit chat mode\n\n"
-        "*Example expense:*\n"
-        "_I bought coffee for 5 and pizza for 10_"
+        "*Example:*\n"
+        "_coffee 5, pizza 10, cinema ticket 20_"
     )
     await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
@@ -44,7 +60,8 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /stats command — show spending analytics."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"{BACKEND_URL}/stats")
+            response = await client.get(f"{BACKEND_URL}/api/stats")
+            response.raise_for_status()
             data = response.json()
 
         total = data.get("total", 0)
@@ -57,17 +74,18 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if by_category:
             message += "*By category:*\n"
-            for cat, amount in by_category.items():
-                message += f"• {cat}: ${amount:.2f}\n"
+            for cat, amount in sorted(by_category.items(), key=lambda x: x[1], reverse=True):
+                emoji = _emoji(cat)
+                message += f"{emoji} {cat}: ${amount:.2f}\n"
         else:
-            message += "No expenses recorded yet."
+            message += "No expenses recorded yet. Send me your expenses to get started!"
 
         await update.message.reply_text(message, parse_mode="Markdown")
 
     except Exception as e:
         logger.error(f"Error fetching stats: {e}")
         await update.message.reply_text(
-            "⚠️ Sorry, I encountered an error fetching your stats."
+            "⚠️ Sorry, I encountered an error fetching your stats. Please try again later."
         )
 
 
@@ -75,7 +93,8 @@ async def advice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /advice command — get AI financial tips."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"{BACKEND_URL}/advice")
+            response = await client.get(f"{BACKEND_URL}/api/advice")
+            response.raise_for_status()
             data = response.json()
 
         tips = data.get("tips", [])
@@ -97,7 +116,7 @@ async def advice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error fetching advice: {e}")
         await update.message.reply_text(
-            "⚠️ Sorry, I encountered an error generating advice."
+            "⚠️ Sorry, I encountered an error generating advice. Please try again later."
         )
 
 
@@ -145,9 +164,10 @@ async def handle_chat_message(update: Update, user_text: str):
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
-                f"{BACKEND_URL}/chat",
+                f"{BACKEND_URL}/api/chat",
                 json={"message": user_text},
             )
+            response.raise_for_status()
             data = response.json()
 
         bot_response = data.get("response", "")
@@ -171,9 +191,10 @@ async def handle_expense_message(update: Update, user_text: str):
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
-                f"{BACKEND_URL}/parse-expenses",
+                f"{BACKEND_URL}/api/parse-expenses",
                 json={"text": user_text},
             )
+            response.raise_for_status()
             data = response.json()
 
         saved_expenses = data.get("saved", [])
@@ -181,18 +202,30 @@ async def handle_expense_message(update: Update, user_text: str):
         if not saved_expenses:
             await update.message.reply_text(
                 "❌ No expenses found in your message. Try something like:\n"
-                "_I bought coffee for 5 and pizza for 10_",
+                "_coffee 5, pizza 10, cinema ticket 20_",
                 parse_mode="Markdown",
             )
             return
 
-        # Build confirmation message
+        # Build rich confirmation with emojis
         message = "✅ *Saved:*\n\n"
         for exp in saved_expenses:
-            message += f"• {exp['item']}: {exp['amount']} ({exp['category']})\n"
+            item = exp["item"]
+            amount = exp["amount"]
+            category = exp["category"]
+            emoji = _emoji(category)
+            message += f"• {item} — ${amount:.2f} ({category} {emoji})\n"
+
+        total = sum(exp["amount"] for exp in saved_expenses)
+        message += f"\n💰 Total: ${total:.2f}"
 
         await update.message.reply_text(message, parse_mode="Markdown")
 
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error processing expense: {e.response.status_code} - {e.response.text}")
+        await update.message.reply_text(
+            "⚠️ Server error. Please try again in a moment."
+        )
     except Exception as e:
         logger.error(f"Error processing expense: {e}")
         await update.message.reply_text(

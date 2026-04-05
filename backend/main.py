@@ -24,7 +24,7 @@ from backend.llm_chat import chat_with_assistant
 
 app = FastAPI(title="SmartReceipt API", version="2.0.0")
 
-# CORS for frontend
+# CORS — frontend is served by nginx on same origin, but allow all for dev
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -69,9 +69,14 @@ def startup():
     init_db()
 
 
-# ==================== EXPENSE ENDPOINTS ====================
+# ==================== API ROUTER (mounted at /api) ====================
 
-@app.post("/parse-expenses")
+api = FastAPI()
+
+
+# --- Expense endpoints ---
+
+@api.post("/parse-expenses")
 async def parse_expenses(request: ParseRequest):
     """Parse expenses from text using LLM and save to database."""
     if not request.text.strip():
@@ -80,7 +85,7 @@ async def parse_expenses(request: ParseRequest):
     expenses = parse_expenses_with_llm(request.text)
 
     if not expenses:
-        return {"message": "No expenses found in the text.", "saved": []}
+        return {"message": "No expense found in the text.", "saved": []}
 
     saved = []
     for exp in expenses:
@@ -98,18 +103,19 @@ async def parse_expenses(request: ParseRequest):
             print(f"Error saving expense: {e}")
             continue
 
-    return {"message": f"Saved {len(saved)} expense(s)", "saved": saved}
+    items = ", ".join(e["item"] for e in saved)
+    return {"message": f"✅ Saved {len(saved)} expense(s): {items}", "saved": saved}
 
 
-@app.get("/expenses")
+@api.get("/expenses")
 async def get_expenses():
     """Get all stored expenses."""
     return get_all_expenses()
 
 
-# ==================== STATS ENDPOINT ====================
+# --- Stats ---
 
-@app.get("/stats")
+@api.get("/stats")
 async def get_stats():
     """Get spending analytics: total and per-category."""
     total = get_total_spending()
@@ -123,9 +129,9 @@ async def get_stats():
     ).model_dump()
 
 
-# ==================== ADVICE ENDPOINT ====================
+# --- Advice ---
 
-@app.get("/advice")
+@api.get("/advice")
 async def get_advice():
     """Generate AI financial advice based on user's expenses."""
     expenses = get_recent_expenses(limit=50)
@@ -144,7 +150,7 @@ async def get_advice():
 
     # Save advice to history
     advice_content = "\n".join([t["tip"] for t in tips])
-    saved_record = save_advice(advice_content)
+    save_advice(advice_content)
 
     return AdviceResponse(
         tips=tips,
@@ -152,15 +158,15 @@ async def get_advice():
     ).model_dump()
 
 
-@app.get("/advice/history")
+@api.get("/advice/history")
 async def get_advice_history_endpoint(limit: int = 10):
     """Get advice history."""
     return get_advice_history(limit=limit)
 
 
-# ==================== CHAT ENDPOINT ====================
+# --- Chat ---
 
-@app.post("/chat")
+@api.post("/chat")
 async def chat(request: ChatRequest):
     """Chat with AI financial assistant."""
     if not request.message.strip():
@@ -183,7 +189,6 @@ async def chat(request: ChatRequest):
         stats=stats
     )
 
-    # Save chat message
     save_chat_message(request.message, bot_response)
 
     return ChatResponse(
@@ -192,22 +197,26 @@ async def chat(request: ChatRequest):
     ).model_dump()
 
 
-@app.get("/chat/history")
+@api.get("/chat/history")
 async def get_chat_history_endpoint(limit: int = 20):
     """Get chat history."""
     history = get_chat_history(limit=limit)
     return list(reversed(history))  # Return in chronological order
 
 
-# ==================== HEALTH CHECK ====================
+# --- Health ---
 
-@app.get("/health")
+@api.get("/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok", "version": "2.0.0"}
 
 
-# ==================== WEB FRONTEND ====================
+# Mount API under /api prefix
+app.mount("/api", api)
+
+
+# ==================== WEB FRONTEND (served at /) ====================
 
 FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
 

@@ -1,4 +1,5 @@
-const API_URL = window.location.origin;
+// All API calls go through nginx reverse proxy at /api/
+const API = "/api";
 
 // ==================== TAB NAVIGATION ====================
 
@@ -16,18 +17,14 @@ document.addEventListener("DOMContentLoaded", () => {
         item.addEventListener("click", () => {
             const tab = item.dataset.tab;
 
-            // Update active nav
             navItems.forEach(n => n.classList.remove("active"));
             item.classList.add("active");
 
-            // Update active tab
             document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
             document.getElementById(`tab-${tab}`).classList.add("active");
 
-            // Update page title
             document.getElementById("pageTitle").textContent = pageTitles[tab] || "Dashboard";
 
-            // Load tab data
             switch (tab) {
                 case "dashboard": loadDashboard(); break;
                 case "expenses": loadAllExpenses(); break;
@@ -38,7 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Load dashboard on init
     loadDashboard();
 });
 
@@ -47,14 +43,13 @@ document.addEventListener("DOMContentLoaded", () => {
 async function loadDashboard() {
     try {
         const [statsRes, expensesRes] = await Promise.all([
-            fetch(`${API_URL}/stats`),
-            fetch(`${API_URL}/expenses`)
+            fetch(`${API}/stats`),
+            fetch(`${API}/expenses`)
         ]);
 
         const stats = await statsRes.json();
         const expenses = await expensesRes.json();
 
-        // Update stat cards
         document.getElementById("dashTotal").textContent = `$${stats.total.toFixed(2)}`;
         document.getElementById("dashCount").textContent = stats.expense_count;
 
@@ -70,7 +65,6 @@ async function loadDashboard() {
             document.getElementById("dashTopCategory").textContent = "—";
         }
 
-        // Recent expenses
         const container = document.getElementById("recentExpenses");
         const recent = expenses.slice(0, 5);
 
@@ -99,7 +93,7 @@ async function submitQuickExpense() {
     btn.textContent = "Processing...";
 
     try {
-        const response = await fetch(`${API_URL}/parse-expenses`, {
+        const response = await fetch(`${API}/parse-expenses`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text })
@@ -129,7 +123,7 @@ async function loadAllExpenses() {
     container.innerHTML = '<div class="loading">Loading expenses...</div>';
 
     try {
-        const response = await fetch(`${API_URL}/expenses`);
+        const response = await fetch(`${API}/expenses`);
         const expenses = await response.json();
 
         if (expenses.length === 0) {
@@ -156,7 +150,7 @@ async function submitExpense() {
     btn.textContent = "Processing...";
 
     try {
-        const response = await fetch(`${API_URL}/parse-expenses`, {
+        const response = await fetch(`${API}/parse-expenses`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text })
@@ -184,8 +178,8 @@ function expenseItemHTML(exp) {
     return `
         <div class="expense-item">
             <div class="expense-info">
-                <div class="expense-name">${escapeHtml(exp.item)}</div>
                 <div class="expense-category">${escapeHtml(exp.category)}</div>
+                <div class="expense-name">${escapeHtml(exp.item)}</div>
                 <div class="expense-date">${date}</div>
             </div>
             <div class="expense-amount">$${parseFloat(exp.amount).toFixed(2)}</div>
@@ -203,10 +197,9 @@ async function loadStats() {
     chart.innerHTML = '<div class="loading">Loading...</div>';
 
     try {
-        const response = await fetch(`${API_URL}/stats`);
+        const response = await fetch(`${API}/stats`);
         const stats = await response.json();
 
-        // Overview
         const byCategory = stats.by_category || {};
         const categories = Object.keys(byCategory);
 
@@ -225,7 +218,6 @@ async function loadStats() {
             </div>
         `;
 
-        // Category bars
         if (categories.length === 0) {
             chart.innerHTML = '<div class="empty-state">No category data available.</div>';
             return;
@@ -270,7 +262,7 @@ async function generateAdvice() {
     container.innerHTML = '<div class="loading">Generating advice...</div>';
 
     try {
-        const response = await fetch(`${API_URL}/advice`);
+        const response = await fetch(`${API}/advice`);
         const data = await response.json();
 
         const tips = data.tips || [];
@@ -296,7 +288,7 @@ async function loadAdviceHistory() {
     const container = document.getElementById("adviceHistory");
 
     try {
-        const response = await fetch(`${API_URL}/advice/history`);
+        const response = await fetch(`${API}/advice/history`);
         const history = await response.json();
 
         if (history.length === 0) {
@@ -325,7 +317,7 @@ async function loadChatHistory() {
     const container = document.getElementById("chatMessages");
 
     try {
-        const response = await fetch(`${API_URL}/chat/history`);
+        const response = await fetch(`${API}/chat/history`);
         const history = await response.json();
 
         if (history.length > 0) {
@@ -363,7 +355,6 @@ async function sendChatMessage() {
 
     if (!message) return;
 
-    // Add user message
     container.innerHTML += `
         <div class="chat-message user">
             <div class="message-content">${escapeHtml(message)}</div>
@@ -373,7 +364,6 @@ async function sendChatMessage() {
     input.value = "";
     scrollToBottom(container);
 
-    // Add loading
     const loadingId = "loading-" + Date.now();
     container.innerHTML += `
         <div class="chat-message bot" id="${loadingId}">
@@ -383,7 +373,7 @@ async function sendChatMessage() {
     scrollToBottom(container);
 
     try {
-        const response = await fetch(`${API_URL}/chat`, {
+        const response = await fetch(`${API}/chat`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message })
@@ -391,7 +381,6 @@ async function sendChatMessage() {
 
         const data = await response.json();
 
-        // Replace loading with response
         const loadingEl = document.getElementById(loadingId);
         if (loadingEl) {
             loadingEl.querySelector(".message-content").textContent = data.response || "Sorry, I couldn't process that.";

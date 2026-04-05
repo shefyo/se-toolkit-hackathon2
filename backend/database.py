@@ -3,21 +3,29 @@ from datetime import datetime
 from typing import List, Dict, Optional
 import os
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "smartreceipt.db")
+# Shared persistent DB — mounted via Docker volume so bot/backend/frontend all see the same data
+DB_PATH = os.environ.get(
+    "DATABASE_PATH",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "smartreceipt.db"),
+)
+
+# Ensure parent directory exists (auto-create on first import)
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
 
 def init_db():
+    """Create tables if they don't exist. Safe to call multiple times."""
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Expenses table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,7 +36,6 @@ def init_db():
         )
     """)
 
-    # Advice history table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS advice_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +44,6 @@ def init_db():
         )
     """)
 
-    # Chat messages table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -6,6 +6,9 @@ __pycache__/
 *.sqlite3
 smartreceipt.db
 
+# Persistent data (SQLite DB)
+data/
+
 # Virtual environment
 venv/
 env/

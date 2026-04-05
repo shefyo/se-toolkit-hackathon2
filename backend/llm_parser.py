@@ -16,71 +16,80 @@ VALID_CATEGORIES = [
     "shopping", "utilities", "health", "travel", "other"
 ]
 
-# ==================== KEYWORD MAPPINGS ====================
-# These override the LLM — rule-based correction is ALWAYS applied.
+# ==================== CATEGORY KEYWORD MAP ====================
+# Comprehensive keyword lists for rule-based fallback and post-validation.
 
 CATEGORY_KEYWORDS = {
     "food": [
-        "coffee", "pizza", "lunch", "dinner", "breakfast", "burger", "snack",
-        "cake", "beer", "wine", "drink", "meal", "restaurant", "cafe", "bakery",
-        "chips", "crisps", "grocery", "groceries", "milk", "bread", "cheese",
+        "coffee", "cafe", "lunch", "dinner", "breakfast", "pizza", "burger", "snack",
+        "cake", "beer", "wine", "drink", "meal", "restaurant", "bakery",
+        "chips", "crisps", "potato chips", "grocery", "groceries", "milk", "bread", "cheese",
         "pasta", "rice", "chicken", "meat", "fish", "sushi", "salad", "soup",
         "sandwich", "taco", "steak", "fries", "ice cream", "donut", "cookie",
         "potato", "tomato", "fruit", "vegetable", "apple", "banana", "egg",
-        "butter", "yogurt", "cereal", "water", "juice", "soda", "tea"
+        "butter", "yogurt", "cereal", "water", "juice", "soda", "tea",
+        "noodles", "ramen", "kebab", "wrap", "burrito", "hotdog", "hot dog",
+        "pancakes", "waffle", "muffin", "croissant", "smoothie", "latte", "cappuccino",
+        "espresso", "mocha", "cocoa", "chocolate", "candy", "icecream",
     ],
     "transport": [
         "taxi", "uber", "bolt", "bus", "train", "metro", "subway", "fuel",
-        "gas", "petrol", "parking", "toll", "tram", "bike rental", "scooter",
-        "airfare", "flight", "flight ticket"
+        "gas", "petrol", "diesel", "parking", "toll", "tram", "bike rental", "scooter",
+        "car wash", "car repair", "oil change", "tire",
+        "ride", "cab", "lyft", "transport", "commute",
     ],
     "entertainment": [
-        "cinema", "movie", "ticket", "concert", "netflix", "spotify", "game",
-        "games", "gaming", "theater", "theatre", "museum", "zoo", "amusement",
-        "streaming", "disney", "hulu", "youtube", "twitch", "book", "magazine",
-        "comic", "novel", "event", "festival", "club", "bar", "pub", "bowling",
-        "karaoke", "arcade", "subscription"
+        "cinema", "movie", "cinema ticket", "movie ticket", "ticket", "concert",
+        "netflix", "spotify", "game", "games", "gaming", "theater", "theatre",
+        "museum", "zoo", "amusement", "streaming", "disney", "hulu", "youtube",
+        "twitch", "book", "magazine", "comic", "novel", "event", "festival",
+        "club", "bar", "pub", "bowling", "karaoke", "arcade",
+        "subscription", "hbo", "prime video", "apple music",
+        "show", "performance", "play", "opera", "ballet", "exhibition",
+        "park entry", "theme park", "water park",
     ],
     "shopping": [
         "clothes", "clothing", "shoes", "sneakers", "electronics", "phone",
         "laptop", "tablet", "headphones", "charger", "case", "gadget", "shirt",
         "pants", "jeans", "dress", "jacket", "coat", "hat", "bag", "backpack",
         "watch", "jewelry", "perfume", "cosmetics", "makeup", "furniture",
-        "decor", "appliance", "tv", "monitor", "keyboard", "mouse"
+        "decor", "appliance", "tv", "monitor", "keyboard", "mouse",
+        "accessories", "socks", "underwear", "scarf", "gloves", "belt",
+        "sunglasses", "umbrella", "wallet", "purse",
     ],
     "utilities": [
         "electricity", "water", "internet", "wifi", "phone bill", "rent",
         "heating", "gas bill", "sewage", "trash", "garbage", "utility",
-        "cloud storage", "icloud", "google one"
+        "cloud storage", "icloud", "google one", "mobile plan", "cell phone bill",
+        "cable", "satellite", "home insurance", "maintenance",
     ],
     "health": [
         "medicine", "doctor", "pharmacy", "hospital", "gym", "vitamin",
         "dentist", "therapy", "massage", "insurance", "clinic", "prescription",
-        "bandage", "painkiller", "supplement", "protein"
+        "bandage", "painkiller", "supplement", "protein",
+        "dental", "optician", "glasses", "contact lens", "checkup",
+        "healthcare", "medical", "first aid",
     ],
     "travel": [
         "hotel", "hostel", "airbnb", "accommodation", "luggage", "visa",
         "passport", "tour", "excursion", "cruise", "resort", "camping",
-        "suitcase", "booking", "reservation"
-    ]
+        "suitcase", "booking", "reservation",
+        "flight", "flight ticket", "airplane", "airfare",
+    ],
 }
 
 # Order matters: categories checked first win on ambiguous keywords.
-# "ticket" defaults to entertainment (cinema, concert) over transport.
-# "subscription" is checked under entertainment (netflix, spotify).
 CATEGORY_CHECK_ORDER = [
     "entertainment",
     "food",
-    "transport",
     "travel",
+    "transport",
     "shopping",
     "health",
     "utilities",
-    "other",
 ]
 
 # ==================== TYPO CORRECTION MAP ====================
-# Common typos → correct spelling
 
 TYPO_CORRECTIONS = {
     "luch": "lunch",
@@ -93,7 +102,6 @@ TYPO_CORRECTIONS = {
     "resturant": "restaurant",
     "restarant": "restaurant",
     "bargur": "burger",
-    "sushi": "sushi",
     "tickt": "ticket",
     "ticke": "ticket",
     "transpor": "transport",
@@ -109,36 +117,55 @@ TYPO_CORRECTIONS = {
     "utilites": "utilities",
     "grocerie": "groceries",
     "bakerry": "bakery",
+    "grocries": "groceries",
+    "sandwhich": "sandwich",
+    "restaraunt": "restaurant",
 }
+
+# ==================== SYSTEM PROMPT ====================
+
+SYSTEM_PROMPT = """You are an expense extraction assistant. Your job is to extract ALL expenses mentioned in the user's text and return them as a STRICT JSON array.
+
+STRICT RULES:
+1. Return ONLY a valid JSON array — no markdown, no explanation, no code blocks.
+2. Extract EVERY expense mentioned — never skip items.
+3. Never hallucinate expenses that aren't in the text.
+4. Each expense must have exactly these fields:
+   - "item": the name of the expense (lowercase, fix typos, trim spaces)
+   - "amount": the numeric amount (number only, no currency symbols)
+   - "category": EXACTLY one of: food, transport, entertainment, shopping, utilities, health, travel, other
+
+CATEGORY MAPPING (use these rules):
+- food = meals, drinks, groceries, snacks, restaurant orders (coffee, pizza, chips, lunch, dinner, groceries, burger, sandwich)
+- transport = taxi, rideshare, bus, train, metro, fuel, gas, parking, toll (taxi, uber, bus, metro, fuel, parking)
+- entertainment = cinema, movies, games, streaming, event tickets, subscriptions (cinema ticket, movie, netflix, concert, game)
+- shopping = clothes, electronics, gadgets, accessories, personal items (clothes, shoes, phone, laptop, jewelry)
+- utilities = rent, electricity, internet, phone bills, cloud storage (rent, electricity, internet, wifi, phone bill)
+- health = medicine, doctor, gym, pharmacy, dental (pharmacy, doctor, gym, medicine)
+- travel = flights, hotels, hostels, luggage, tours, accommodation (hotel, flight, airbnb, hostel)
+- other = anything that clearly doesn't fit above
+
+NORMALIZATION:
+- Fix typos: "luch" → "lunch", "cinma" → "cinema", "cofee" → "coffee"
+- Normalize: trim spaces, lowercase everything
+- Keep multi-word items intact: "cinema ticket", "potato chips"
+
+EXAMPLES:
+Input: "I bought coffee for 5 and cinema ticket for 20"
+Output: [{"item":"coffee","amount":5,"category":"food"},{"item":"cinema ticket","amount":20,"category":"entertainment"}]
+
+Input: "coffee 5, pizza 10, cinema ticket 20"
+Output: [{"item":"coffee","amount":5,"category":"food"},{"item":"pizza","amount":10,"category":"food"},{"item":"cinema ticket","amount":20,"category":"entertainment"}]
+
+Input: "I spent 50 on groceries and 15 on taxi"
+Output: [{"item":"groceries","amount":50,"category":"food"},{"item":"taxi","amount":15,"category":"transport"}]
+"""
 
 
 # ==================== MAIN PARSING FUNCTION ====================
 
-SYSTEM_PROMPT = """You are an expense extraction assistant.
-Extract all expenses from the user's text and return ONLY a valid JSON array.
-Each expense must have:
-- item: the name of the expense (fix typos, use common sense)
-- amount: the numeric amount (number only, no currency symbols)
-- category: EXACTLY one of: food, transport, entertainment, shopping, utilities, health, travel, other
-
-Category rules:
-- food = meals, drinks, groceries (coffee, pizza, chips, lunch, groceries)
-- transport = taxi, bus, train, fuel, gas, parking
-- entertainment = cinema, movies, games, streaming, tickets for events
-- shopping = clothes, electronics, gadgets, accessories
-- utilities = rent, electricity, internet, bills
-- health = medicine, doctor, gym, pharmacy
-- travel = hotel, hostel, luggage, tours, accommodation
-
-Return ONLY the JSON array, nothing else. If no expenses found, return [].
-
-Example output:
-[{"item": "coffee", "amount": 5, "category": "food"}, {"item": "cinema ticket", "amount": 10, "category": "entertainment"}]
-"""
-
-
 def parse_expenses_with_llm(text: str) -> List[Dict]:
-    """Parse expenses from text using LLM, then correct categories with rules."""
+    """Parse expenses from text using LLM, then apply post-processing and rule-based correction."""
     if not LLM_API_KEY:
         expenses = _fallback_parse(text)
     else:
@@ -152,35 +179,38 @@ def parse_expenses_with_llm(text: str) -> List[Dict]:
                     {"role": "user", "content": text}
                 ],
                 temperature=0.1,
-                max_tokens=500
+                max_tokens=1000
             )
 
             content = response.choices[0].message.content.strip()
 
-            # Extract JSON from response (handle markdown code blocks)
-            if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
+            # Strip markdown code fences if present
+            content = _extract_json(content)
 
-            raw_expenses = json.loads(content.strip())
+            raw_expenses = json.loads(content)
             if not isinstance(raw_expenses, list):
                 raw_expenses = []
 
-            # Normalize raw expenses
             expenses = []
             for exp in raw_expenses:
                 if not isinstance(exp, dict):
                     continue
+
+                # Extract and validate fields
                 item = str(exp.get("item", "")).strip()
+                if not item:
+                    continue
+
                 try:
                     amount = float(exp.get("amount", 0))
                 except (ValueError, TypeError):
                     continue
-                category = str(exp.get("category", "other")).strip().lower()
-
-                if not item or amount <= 0:
+                if amount <= 0:
                     continue
+
+                category = str(exp.get("category", "other")).strip().lower()
+                if category not in VALID_CATEGORIES:
+                    category = "other"
 
                 expenses.append({
                     "item": item,
@@ -188,16 +218,56 @@ def parse_expenses_with_llm(text: str) -> List[Dict]:
                     "category": category
                 })
 
+        except json.JSONDecodeError as e:
+            print(f"LLM returned invalid JSON: {e}")
+            expenses = _fallback_parse(text)
         except Exception as e:
             print(f"LLM error: {e}, falling back to simple parsing")
             expenses = _fallback_parse(text)
 
-    # ==================== CRITICAL: Rule-based category correction ====================
-    # ALWAYS override LLM output with keyword-based rules
+    # ==================== POST-PROCESSING ====================
+    # Normalize every expense
     for expense in expenses:
+        # Lowercase and trim
+        expense["item"] = expense["item"].lower().strip()
+
+        # Fix typos in item name
+        expense["item"] = fix_typos(expense["item"])
+
+        # Rule-based category correction (ALWAYS overrides LLM)
         expense["category"] = correct_category(expense["item"], expense["category"])
 
+    # Deduplicate: merge identical items with same amount
+    expenses = _deduplicate_expenses(expenses)
+
     return expenses
+
+
+def _extract_json(content: str) -> str:
+    """Extract JSON from LLM response, handling markdown code blocks and surrounding text."""
+    # Try markdown code block
+    match = re.search(r'```(?:json)?\s*(\[[\s\S]*?\])\s*```', content)
+    if match:
+        return match.group(1)
+
+    # Try to find a JSON array anywhere in the text
+    match = re.search(r'\[[\s\S]*\]', content)
+    if match:
+        return match.group(0)
+
+    return content.strip()
+
+
+def _deduplicate_expenses(expenses: List[Dict]) -> List[Dict]:
+    """Merge duplicate expenses (same item + same amount)."""
+    seen = set()
+    result = []
+    for exp in expenses:
+        key = (exp["item"], exp["amount"])
+        if key not in seen:
+            seen.add(key)
+            result.append(exp)
+    return result
 
 
 # ==================== CATEGORY CORRECTION (RULE-BASED OVERRIDE) ====================
@@ -208,34 +278,28 @@ def correct_category(item: str, llm_category: str = "other") -> str:
     Rules ALWAYS override the LLM.
 
     Args:
-        item: the expense item name
+        item: the expense item name (should already be lowercase + typo-fixed)
         llm_category: the category assigned by the LLM (used as fallback)
     Returns:
         corrected category (one of VALID_CATEGORIES)
     """
     item_lower = item.lower().strip()
 
-    # Step 1: Fix typos in item name
-    corrected_item = fix_typos(item_lower)
+    # Step 1: Exact match — item equals a keyword
+    for category in CATEGORY_CHECK_ORDER:
+        keywords = CATEGORY_KEYWORDS.get(category, [])
+        for keyword in keywords:
+            if item_lower == keyword:
+                return category
 
-    # Step 2: Try exact keyword match in priority order.
-    # When multiple categories match, pick the one with the longest matching keyword
-    # (more specific match wins).
-    # EXCEPTION: if the item exactly equals a keyword, that category wins immediately
-    # (prevents substring collisions like "ticket" matching "flight ticket").
+    # Step 2: Substring match — pick category with longest matching keyword
     best_category = None
     best_keyword_len = 0
 
     for category in CATEGORY_CHECK_ORDER:
-        if category == "other":
-            continue
         keywords = CATEGORY_KEYWORDS.get(category, [])
         for keyword in keywords:
-            # Exact match on the full item — highest priority
-            if corrected_item == keyword:
-                return category
-            # Substring match
-            if keyword in corrected_item or corrected_item in keyword:
+            if keyword in item_lower or item_lower in keyword:
                 kw_len = len(keyword)
                 if kw_len > best_keyword_len:
                     best_keyword_len = kw_len
@@ -252,11 +316,11 @@ def correct_category(item: str, llm_category: str = "other") -> str:
             all_keywords.append(kw)
             keyword_to_category[kw] = category
 
-    close = get_close_matches(corrected_item, all_keywords, n=1, cutoff=0.7)
+    close = get_close_matches(item_lower, all_keywords, n=1, cutoff=0.7)
     if close:
         return keyword_to_category[close[0]]
 
-    # Step 4: Validate LLM fallback — if invalid, set to "other"
+    # Step 4: Validate LLM fallback
     if llm_category in VALID_CATEGORIES:
         return llm_category
 
@@ -289,41 +353,57 @@ def fix_typos(item: str) -> str:
 
 def _fallback_parse(text: str) -> List[Dict]:
     """Simple fallback parser that extracts items with amounts using regex."""
-    # Split by "and" to handle multiple expenses
-    parts = re.split(r'\s+and\s+', text, flags=re.IGNORECASE)
-
     expenses = []
-    seen_items = set()
 
-    for part in parts:
-        part = part.strip()
-        # Remove common prefixes
-        part = re.sub(r'\b(bought|got|paid|spent|i|we|my|our)\s+', '', part, flags=re.IGNORECASE).strip()
+    # Pattern 1: "item for amount" or "item for $amount"
+    pattern1 = re.finditer(
+        r'([a-zA-Z][a-zA-Z\s]*?)\s+for\s+\$?\s*(\d+(?:\.\d+)?)',
+        text, re.IGNORECASE
+    )
+    for m in pattern1:
+        item, amount = m.group(1).strip(), float(m.group(2))
+        if item and amount > 0:
+            expenses.append({"item": item, "amount": amount, "category": "other"})
 
-        # Pattern: item "for" amount
-        match = re.search(r'([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\s+for\s+(\d+(?:\.\d+)?)', part, re.IGNORECASE)
-        if not match:
-            # Pattern: amount then item
-            match = re.search(r'(\d+(?:\.\d+)?)\s+(?:dollars?\s+)?(?:for\s+)?([a-zA-Z]+(?:\s+[a-zA-Z]+)?)', part, re.IGNORECASE)
-            if match:
-                amount, item = match.groups()
-            else:
-                continue
+    if expenses:
+        return expenses
+
+    # Pattern 2: "amount on/for item"
+    pattern2 = re.finditer(
+        r'\$?\s*(\d+(?:\.\d+)?)\s+(?:on|for)\s+([a-zA-Z][a-zA-Z\s]*?)',
+        text, re.IGNORECASE
+    )
+    for m in pattern2:
+        amount, item = float(m.group(1)), m.group(2).strip()
+        if item and amount > 0:
+            expenses.append({"item": item, "amount": amount, "category": "other"})
+
+    if expenses:
+        return expenses
+
+    # Pattern 3: comma-separated "item amount" pairs
+    # E.g. "coffee 5, pizza 10, cinema ticket 20"
+    parts = re.split(r'[,\s]+and\s+|[,\s]+', text, flags=re.IGNORECASE)
+    # Try to pair consecutive word groups with numbers
+    tokens = text.replace(",", " , ").split()
+    i = 0
+    while i < len(tokens):
+        # Look for a number followed by words, or words followed by a number
+        if tokens[i].replace(".", "").isdigit():
+            # Number found — look for item words nearby
+            amount = float(tokens[i])
+            # Collect words before or after
+            item_words = []
+            j = i + 1
+            while j < len(tokens) and j < i + 4 and not tokens[j].replace(".", "").isdigit():
+                if tokens[j] not in ("and", "the", "a", "an", "for", "on", "i", "we", "my", "spent", "paid", "bought"):
+                    item_words.append(tokens[j])
+                j += 1
+            if item_words:
+                item = " ".join(item_words).lower()
+                expenses.append({"item": item, "amount": amount, "category": "other"})
+            i = j
         else:
-            item, amount = match.groups()
-
-        item = item.strip().lower()
-        # Skip common non-item words
-        if item in ('and', 'the', 'a', 'an', 'for', 'my', 'some', 'also', 'then', 'with', 'i', 'we'):
-            continue
-        if item in seen_items:
-            continue
-
-        seen_items.add(item)
-        expenses.append({
-            "item": item,
-            "amount": float(amount),
-            "category": "other"  # Will be corrected by correct_category()
-        })
+            i += 1
 
     return expenses
